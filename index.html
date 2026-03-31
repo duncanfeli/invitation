@@ -282,7 +282,7 @@
       </div>
       <p>Kindly confirm your attendance before 1 November 2026.</p>
       <div class="rsvp-summary" id="rsvpSummary">
-        Invitation ID: <strong id="invitationId">INV000</strong> · Max Guests: <strong id="maxGuestLabel">1</strong>
+        Max Guests: <strong id="maxGuestLabel">1</strong>
       </div>
       <form id="rsvpForm">
         <input type="text" id="guestInput" placeholder="Nama Undangan / Family Name" required />
@@ -305,15 +305,41 @@
 
   <script>
     const urlParams = new URLSearchParams(window.location.search);
-    const invitationName = urlParams.get('to') || 'Our Beloved Guest';
-    const maxGuest = parseInt(urlParams.get('max')) || 1;
     const invitationId = urlParams.get('id') || 'INV000';
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxD0VcGi4uAID1RRrbfwpl6laE32txO9kekJv6_h1rwlvfuui92ZPXEknCeSaAUxMwE/exec';
 
-    document.getElementById('guestBadge').innerHTML = `Dear <strong>${invitationName}</strong>`;
-    document.getElementById('openingGuest').textContent = invitationName;
-    document.getElementById('guestInput').value = invitationName;
-    document.getElementById('invitationId').textContent = invitationId;
-    document.getElementById('maxGuestLabel').textContent = maxGuest;
+    let invitationName = 'Our Beloved Guest';
+    let maxGuest = 1;
+
+    // Fetch guest data from Google Sheet
+    async function loadGuestData() {
+      try {
+        const response = await fetch(`${APPS_SCRIPT_URL}?id=${encodeURIComponent(invitationId)}`);
+        const result = await response.json();
+        
+        if (result.success) {
+          invitationName = result.name;
+          maxGuest = result.pax;
+        } else {
+          console.log('Guest not found in sheet, using defaults');
+        }
+      } catch (error) {
+        console.log('Error fetching guest data:', error);
+      }
+      
+      // Initialize page after loading data
+      initializePage();
+    }
+
+    function initializePage() {
+      document.getElementById('guestBadge').innerHTML = `Dear <strong>${invitationName}</strong>`;
+      document.getElementById('openingGuest').textContent = invitationName;
+      document.getElementById('guestInput').value = invitationName;
+      document.getElementById('invitationId').textContent = invitationId;
+      document.getElementById('maxGuestLabel').textContent = maxGuest;
+      
+      populateGuestCount();
+    }
 
     // MUSIC + OPENING
     const music = document.getElementById('bgMusic');
@@ -368,7 +394,6 @@
         guestCountSelect.appendChild(option);
       }
     }
-    populateGuestCount();
 
     function renderGuestInputs(count) {
       guestDetailsContainer.innerHTML = '';
@@ -434,7 +459,7 @@
       submitBtn.textContent = 'Mengirim...';
       submitBtn.disabled = true;
 
-      fetch('https://script.google.com/macros/s/AKfycbyZ6CeuOBlrl-fOsIZ-ml_LVLpZTcX_MWsGH1BI6frPbj_SOBj8vKrWhLAi6DygI8e3/exec', {
+      fetch(APPS_SCRIPT_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -493,6 +518,9 @@
     }
     updateCountdown();
     setInterval(updateCountdown, 1000);
+
+    // Load guest data on page load
+    loadGuestData();
   </script>
 </body>
 </html>
