@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wedding Invitation - Duncan & Feli</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; scroll-behavior: smooth; }
+    body { font-family: 'Montserrat', sans-serif; background: #f8f4ef; color: #3d2f2a; line-height: 1.7; }
+    body.lock-scroll { overflow: hidden; }
+    img { width: 100%; display: block; }
+    .container { width: 90%; max-width: 1150px; margin: auto; }
+    section { padding: 90px 0; }
+    .hidden { display: none !important; }
+
+    /* OPENING SCREEN */
+    .opening-screen {
+      position: fixed; inset: 0; z-index: 10000;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(rgba(25,18,16,0.45), rgba(25,18,16,0.65)),
+                  url('https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
+      color: white; text-align: center; padding: 30px;
+      transition: opacity 0.7s ease, visibility 0.7s ease;
+    }
+    .opening-screen.hide { opacity: 0; visibility: hidden; }
+    .opening-card {
+      max-width: 720px; width: 100%;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 32px; padding: 48px 30px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+    .opening-card small, .hero small, .section-title small, .card small {
+      letter-spacing: 4px; text-transform: uppercase; display: block;
+    }
+    .opening-card small { color: #f3ddd1; margin-bottom: 16px; }
+    .opening-card h1, .hero h1, .section-title h2, .card h3, .quote p, .countdown-box span {
+      font-family: 'Cormorant Garamond', serif;
+    }
+    .opening-card h1 { font-size: 4rem; margin-bottom: 18px; }
+    .opening-card p { color: #f9eee7; margin-bottom: 10px; }
+    .open-btn {
+      margin-top: 28px; padding: 16px 30px; border: none; border-radius: 999px;
+      background: white; color: #3d2f2a; font-weight: 600; letter-spacing: 2px;
+      text-transform: uppercase; cursor: pointer; transition: 0.3s ease;
+    }
+    .open-btn:hover { transform: translateY(-2px); }
+
+    /* MUSIC BUTTON */
+    .music-btn {
+      position: fixed; bottom: 25px; right: 25px; z-index: 9999;
+      background: rgba(61, 47, 42, 0.88); color: white; border: none;
+      border-radius: 999px; padding: 14px 20px; font-size: 0.9rem;
+      letter-spacing: 1px; cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      backdrop-filter: blur(8px); transition: 0.3s ease;
+    }
+    .music-btn:hover { transform: translateY(-2px); opacity: 0.95; }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh; position: relative; display: flex; align-items: center; justify-content: center;
+      text-align: center; padding: 40px 20px; overflow: hidden;
+    }
+    .hero-bg {
+      position: absolute; inset: 0;
+      background: url('https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
+      filter: brightness(0.55); z-index: 0;
+    }
+    .hero-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0.15), rgba(61,47,42,0.55)); z-index: 1; }
+    .hero-content { position: relative; z-index: 2; color: white; max-width: 850px; }
+    .hero small { color: #f1ddd0; margin-bottom: 15px; }
+    .hero h1 { font-size: 4.5rem; font-weight: 600; margin-bottom: 20px; }
+    .line { width: 80px; height: 1px; background: #d8b8a6; margin: 20px auto; }
+    .hero p { font-size: 1.08rem; color: #f7ece6; margin-bottom: 10px; }
+    .guest-badge {
+      margin-top: 22px; display: inline-block; padding: 14px 26px; border-radius: 999px;
+      background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); backdrop-filter: blur(8px);
+    }
+    .btn-group { margin-top: 35px; display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      padding: 14px 28px; border-radius: 999px; text-decoration: none; text-transform: uppercase;
+      font-size: 0.8rem; letter-spacing: 2px; transition: 0.3s ease;
+    }
+    .btn-outline { border: 1px solid #ffffff; color: white; background: transparent; }
+    .btn-outline:hover { background: white; color: #3d2f2a; }
+    .btn-dark { background: #ffffff; color: #3d2f2a; }
+    .btn-dark:hover { opacity: 0.9; }
+
+    .section-title { text-align: center; margin-bottom: 50px; }
+    .section-title small, .card small { color: #8c6f63; margin-bottom: 12px; }
+    .section-title h2 { font-size: 3rem; font-weight: 600; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px; }
+    .card {
+      background: rgba(255,255,255,0.85); padding: 40px; border-radius: 28px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.04); border: 1px solid #e7ddd4;
+    }
+    .card h3 { font-size: 2.3rem; margin-bottom: 15px; }
+    .couple-photo { height: 420px; object-fit: cover; border-radius: 28px; box-shadow: 0 10px 35px rgba(0,0,0,0.08); border: 1px solid #eadfd6; }
+    .couple-box { display: flex; flex-direction: column; justify-content: center; }
+
+    /* COUNTDOWN */
+    .countdown-wrap { background: #fffaf6; }
+    .countdown-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; max-width: 900px; margin: 0 auto;
+    }
+    .countdown-box {
+      background: white; border: 1px solid #eadfd6; border-radius: 28px; padding: 30px 20px; text-align: center;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.04);
+    }
+    .countdown-box span { display: block; font-size: 3rem; color: #3d2f2a; }
+    .countdown-box p { margin-top: 8px; text-transform: uppercase; letter-spacing: 2px; font-size: 0.85rem; color: #8c6f63; }
+
+    .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .gallery-item { overflow: hidden; border-radius: 24px; box-shadow: 0 8px 25px rgba(0,0,0,0.06); border: 1px solid #eadfd6; }
+    .gallery-item img { height: 340px; object-fit: cover; transition: transform 0.5s ease; }
+    .gallery-item:hover img { transform: scale(1.05); }
+    .quote { text-align: center; max-width: 800px; margin: auto; }
+    .quote p { font-size: 2rem; font-style: italic; color: #4d3b34; }
+    .quote span { display: block; margin-top: 20px; text-transform: uppercase; letter-spacing: 3px; color: #8c6f63; font-size: 0.85rem; }
+
+    .rsvp { background: #3d2f2a; color: white; }
+    .rsvp .section-title small { color: #d8c2b5; }
+    .rsvp p { text-align: center; max-width: 700px; margin: 0 auto 35px; color: #f1e5de; }
+    .rsvp-summary {
+      max-width: 700px; margin: 0 auto 24px; padding: 18px 22px; border-radius: 22px;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: #fff; text-align: center;
+    }
+    form { max-width: 700px; margin: auto; display: grid; gap: 16px; }
+    input, select, textarea {
+      width: 100%; padding: 16px 20px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.08); color: white; font-size: 1rem; outline: none;
+    }
+    select option { color: #3d2f2a; }
+    input::placeholder, textarea::placeholder { color: #e8d7ce; }
+    .guest-person-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    button.submit-btn {
+      padding: 16px 24px; border: none; border-radius: 999px; background: white; color: #3d2f2a;
+      text-transform: uppercase; letter-spacing: 2px; cursor: pointer; font-weight: 600; transition: 0.3s ease;
+    }
+    button.submit-btn:hover { opacity: 0.9; }
+    footer { text-align: center; padding: 30px 20px; font-size: 0.9rem; color: #8c6f63; background: #f4eee8; }
+
+    @media (max-width: 900px) {
+      .gallery-grid, .countdown-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 768px) {
+      .opening-card h1, .hero h1 { font-size: 3rem; }
+      .grid-2, .gallery-grid, .guest-person-row, .countdown-grid { grid-template-columns: 1fr; }
+      .section-title h2 { font-size: 2.3rem; }
+      .quote p { font-size: 1.6rem; }
+      .couple-photo { height: 320px; }
+    }
+  </style>
+</head>
+<body class="lock-scroll">
+  <!-- OPENING SCREEN -->
+  <div class="opening-screen" id="openingScreen">
+    <div class="opening-card">
+      <small>Wedding Invitation</small>
+      <h1>Duncan & Feli</h1>
+      <p>Kepada Yth.</p>
+      <p id="openingGuest" style="font-size:1.35rem; font-weight:600; margin-top:8px;">Our Beloved Guest</p>
+      <p style="margin-top:16px;">Tanpa mengurangi rasa hormat, kami mengundang Anda untuk hadir di hari bahagia kami.</p>
+      <button class="open-btn" id="openInvitationBtn">Open Invitation</button>
+    </div>
+  </div>
+
+  <!-- MUSIC -->
+  <button id="musicToggle" class="music-btn">🎵 Music On</button>
+  <audio id="bgMusic" loop>
+    <source src="music/wedding-song.mp3" type="audio/mpeg">
+    Browser Anda tidak mendukung audio.
+  </audio>
+
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <small>The Wedding Of</small>
+      <h1>Duncan & Feli</h1>
+      <div class="line"></div>
+      <p>A celebration of love, grace, and forever.</p>
+      <p>Saturday, 21 November 2026</p>
+      <p>Surabaya, Indonesia</p>
+      <div id="guestBadge" class="guest-badge">Dear Our Beloved Guest</div>
+      <div class="btn-group">
+        <a href="#details" class="btn btn-outline">View Details</a>
+        <a href="#rsvp" class="btn btn-dark">RSVP Now</a>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="grid-2">
+        <div>
+          <img class="couple-photo" src="https://images.unsplash.com/photo-1522673607200-164d1b6ce486?auto=format&fit=crop&w=1000&q=80" alt="Couple Photo">
+        </div>
+        <div class="couple-box">
+          <div class="card">
+            <small>The Bride & Groom</small>
+            <h3>Duncan & Feli</h3>
+            <p>With grateful hearts, we invite you to celebrate our wedding day and witness the beginning of our forever.</p>
+            <br>
+            <p>
+              Son of Mr. [Father Name] & Mrs. [Mother Name] <br>
+              and <br>
+              Daughter of Mr. [Father Name] & Mrs. [Mother Name]
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="countdown-wrap">
+    <div class="container">
+      <div class="section-title">
+        <small>Countdown</small>
+        <h2>Counting Down To Forever</h2>
+      </div>
+      <div class="countdown-grid">
+        <div class="countdown-box"><span id="days">00</span><p>Days</p></div>
+        <div class="countdown-box"><span id="hours">00</span><p>Hours</p></div>
+        <div class="countdown-box"><span id="minutes">00</span><p>Minutes</p></div>
+        <div class="countdown-box"><span id="seconds">00</span><p>Seconds</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="details" style="background: rgba(255,255,255,0.7);">
+    <div class="container">
+      <div class="section-title">
+        <small>Wedding Details</small>
+        <h2>Save The Date</h2>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <small>Holy Matrimony</small>
+          <h3>10:00 AM</h3>
+          <p>Grand Ballroom<br>JW Marriott Surabaya<br>Jl. Embong Malang No.85-89</p>
+        </div>
+        <div class="card">
+          <small>Wedding Reception</small>
+          <h3>06:30 PM</h3>
+          <p>Grand Ballroom<br>JW Marriott Surabaya<br>Jl. Embong Malang No.85-89</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="gallery">
+    <div class="container">
+      <div class="section-title">
+        <small>Prewedding Gallery</small>
+        <h2>Captured Moments</h2>
+      </div>
+      <div class="gallery-grid">
+        <div class="gallery-item"><img src="https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=900&q=80" alt="Gallery 1"></div>
+        <div class="gallery-item"><img src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=900&q=80" alt="Gallery 2"></div>
+        <div class="gallery-item"><img src="https://images.unsplash.com/photo-1523438885200-e635ba2c371e?auto=format&fit=crop&w=900&q=80" alt="Gallery 3"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container quote">
+      <p>“And now these three remain: faith, hope and love. But the greatest of these is love.”</p>
+      <span>1 Corinthians 13:13</span>
+    </div>
+  </section>
+
+  <section class="rsvp" id="rsvp">
+    <div class="container">
+      <div class="section-title">
+        <small>RSVP</small>
+        <h2>We’d Love to Celebrate With You</h2>
+      </div>
+      <p>Kindly confirm your attendance before 1 November 2026.</p>
+      <div class="rsvp-summary" id="rsvpSummary">
+        Invitation ID: <strong id="invitationId">INV000</strong> · Max Guests: <strong id="maxGuestLabel">1</strong>
+      </div>
+      <form id="rsvpForm">
+        <input type="text" id="guestInput" placeholder="Nama Undangan / Family Name" required />
+        <select id="attendance" required>
+          <option value="">Pilih Kehadiran</option>
+          <option value="yes">Hadir</option>
+          <option value="no">Tidak Hadir</option>
+        </select>
+        <select id="guestCount" required>
+          <option value="">Jumlah Tamu</option>
+        </select>
+        <div id="guestDetailsContainer"></div>
+        <textarea id="wishes" rows="4" placeholder="Ucapan & Doa"></textarea>
+        <button type="submit" class="submit-btn">Kirim RSVP</button>
+      </form>
+    </div>
+  </section>
+
+  <footer>With love, Duncan & Feli</footer>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const invitationName = urlParams.get('to') || 'Our Beloved Guest';
+    const maxGuest = parseInt(urlParams.get('max')) || 1;
+    const invitationId = urlParams.get('id') || 'INV000';
+
+    document.getElementById('guestBadge').innerHTML = `Dear <strong>${invitationName}</strong>`;
+    document.getElementById('openingGuest').textContent = invitationName;
+    document.getElementById('guestInput').value = invitationName;
+    document.getElementById('invitationId').textContent = invitationId;
+    document.getElementById('maxGuestLabel').textContent = maxGuest;
+
+    // MUSIC + OPENING
+    const music = document.getElementById('bgMusic');
+    const musicToggle = document.getElementById('musicToggle');
+    const openingScreen = document.getElementById('openingScreen');
+    const openInvitationBtn = document.getElementById('openInvitationBtn');
+    let isPlaying = false;
+
+    async function playMusic() {
+      try {
+        await music.play();
+        isPlaying = true;
+        musicToggle.textContent = '🔇 Music Off';
+      } catch (error) {
+        console.log('Autoplay blocked:', error);
+      }
+    }
+
+    musicToggle.addEventListener('click', async () => {
+      try {
+        if (isPlaying) {
+          music.pause();
+          isPlaying = false;
+          musicToggle.textContent = '🎵 Music On';
+        } else {
+          await music.play();
+          isPlaying = true;
+          musicToggle.textContent = '🔇 Music Off';
+        }
+      } catch (error) {
+        console.log('Music toggle error:', error);
+      }
+    });
+
+    openInvitationBtn.addEventListener('click', async () => {
+      openingScreen.classList.add('hide');
+      document.body.classList.remove('lock-scroll');
+      await playMusic();
+    });
+
+    // RSVP
+    const guestCountSelect = document.getElementById('guestCount');
+    const attendanceSelect = document.getElementById('attendance');
+    const guestDetailsContainer = document.getElementById('guestDetailsContainer');
+
+    function populateGuestCount() {
+      guestCountSelect.innerHTML = '<option value="">Jumlah Tamu</option>';
+      for (let i = 1; i <= maxGuest; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = `${i} Orang`;
+        guestCountSelect.appendChild(option);
+      }
+    }
+    populateGuestCount();
+
+    function renderGuestInputs(count) {
+      guestDetailsContainer.innerHTML = '';
+      for (let i = 1; i <= count; i++) {
+        const row = document.createElement('div');
+        row.className = 'guest-person-row';
+        row.innerHTML = `
+          <input type="text" name="guest_name_${i}" placeholder="Nama Tamu ${i}" required>
+          <input type="text" name="guest_relation_${i}" placeholder="Keterangan (Teman / Keluarga / Pasangan)">
+        `;
+        guestDetailsContainer.appendChild(row);
+      }
+    }
+
+    attendanceSelect.addEventListener('change', function() {
+      if (this.value === 'no') {
+        guestCountSelect.classList.add('hidden');
+        guestCountSelect.removeAttribute('required');
+        guestDetailsContainer.innerHTML = '';
+      } else {
+        guestCountSelect.classList.remove('hidden');
+        guestCountSelect.setAttribute('required', 'required');
+      }
+    });
+
+    guestCountSelect.addEventListener('change', function() {
+      const count = parseInt(this.value);
+      if (!isNaN(count)) renderGuestInputs(count);
+      else guestDetailsContainer.innerHTML = '';
+    });
+
+    document.getElementById('rsvpForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+      const attendance = attendanceSelect.value;
+      const guestCount = attendance === 'yes' ? parseInt(guestCountSelect.value || '0') : 0;
+      const wishes = document.getElementById('wishes').value;
+
+      const guestNames = [];
+      document.querySelectorAll('#guestDetailsContainer .guest-person-row').forEach((row, index) => {
+        const inputs = row.querySelectorAll('input');
+        guestNames.push({
+          no: index + 1,
+          name: inputs[0].value,
+          relation: inputs[1].value
+        });
+      });
+
+      const rsvpData = {
+        invitation_id: invitationId,
+        invitation_name: invitationName,
+        attendance,
+        guest_count: guestCount,
+        guest_details: guestNames,
+        wishes,
+        submitted_at: new Date().toISOString()
+      };
+
+      console.log('RSVP DATA:', rsvpData);
+
+      alert(
+        attendance === 'yes'
+          ? `Terima kasih, ${invitationName}! RSVP untuk ${guestCount} tamu berhasil dikirim 💍`
+          : `Terima kasih, ${invitationName}. Kehadiran Anda sudah kami catat 🤍`
+      );
+
+      document.getElementById('wishes').value = '';
+    });
+
+    // COUNTDOWN
+    const weddingDate = new Date('2026-11-21T10:00:00').getTime();
+    function updateCountdown() {
+      const now = new Date().getTime();
+      const distance = weddingDate - now;
+
+      if (distance < 0) {
+        document.getElementById('days').textContent = '00';
+        document.getElementById('hours').textContent = '00';
+        document.getElementById('minutes').textContent = '00';
+        document.getElementById('seconds').textContent = '00';
+        return;
+      }
+
+      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+      document.getElementById('days').textContent = String(days).padStart(2, '0');
+      document.getElementById('hours').textContent = String(hours).padStart(2, '0');
+      document.getElementById('minutes').textContent = String(minutes).padStart(2, '0');
+      document.getElementById('seconds').textContent = String(seconds).padStart(2, '0');
+    }
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
+  </script>
+</body>
+</html>
