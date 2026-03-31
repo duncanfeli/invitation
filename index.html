@@ -428,13 +428,43 @@
 
       console.log('RSVP DATA:', rsvpData);
 
-      alert(
-        attendance === 'yes'
-          ? `Terima kasih, ${invitationName}! RSVP untuk ${guestCount} tamu berhasil dikirim 💍`
-          : `Terima kasih, ${invitationName}. Kehadiran Anda sudah kami catat 🤍`
-      );
+      // Send to Google Sheet via Apps Script
+      const submitBtn = event.target.querySelector('.submit-btn');
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = 'Mengirim...';
+      submitBtn.disabled = true;
 
-      document.getElementById('wishes').value = '';
+      fetch('https://script.google.com/macros/s/AKfycbyZ6CeuOBlrl-fOsIZ-ml_LVLpZTcX_MWsGH1BI6frPbj_SOBj8vKrWhLAi6DygI8e3/exec', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(rsvpData)
+      })
+      .then(response => response.json())
+      .then(result => {
+        if (result.success) {
+          alert(
+            attendance === 'yes'
+              ? `Terima kasih, ${invitationName}! RSVP untuk ${guestCount} tamu berhasil dikirim 💍`
+              : `Terima kasih, ${invitationName}. Kehadiran Anda sudah kami catat 🤍`
+          );
+          document.getElementById('wishes').value = '';
+          document.getElementById('guestDetailsContainer').innerHTML = '';
+          guestCountSelect.value = '';
+          attendanceSelect.value = '';
+        } else {
+          alert('Error: ' + (result.error || 'Gagal mengirim RSVP'));
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Gagal mengirim RSVP. Silakan coba lagi.');
+      })
+      .finally(() => {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+      });
     });
 
     // COUNTDOWN
