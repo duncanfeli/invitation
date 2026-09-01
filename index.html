@@ -136,7 +136,7 @@
     }
     select option { color: #3d2f2a; }
     input::placeholder, textarea::placeholder { color: #e8d7ce; }
-    .guest-person-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    input[readonly] { opacity: 0.75; cursor: not-allowed; }
     button.submit-btn {
       padding: 16px 24px; border: none; border-radius: 999px; background: white; color: #3d2f2a;
       text-transform: uppercase; letter-spacing: 2px; cursor: pointer; font-weight: 600; transition: 0.3s ease;
@@ -149,7 +149,7 @@
     }
     @media (max-width: 768px) {
       .opening-card h1, .hero h1 { font-size: 3rem; }
-      .grid-2, .gallery-grid, .guest-person-row, .countdown-grid { grid-template-columns: 1fr; }
+      .grid-2, .gallery-grid, .countdown-grid { grid-template-columns: 1fr; }
       .section-title h2 { font-size: 2.3rem; }
       .quote p { font-size: 1.6rem; }
       .couple-photo { height: 320px; }
@@ -285,7 +285,7 @@
         Max Guests: <strong id="maxGuestLabel">1</strong>
       </div>
       <form id="rsvpForm">
-        <input type="text" id="guestInput" placeholder="Nama Undangan / Family Name" required />
+        <input type="text" id="guestInput" placeholder="Nama Undangan / Family Name" readonly />
         <select id="attendance" required>
           <option value="">Pilih Kehadiran</option>
           <option value="yes">Hadir</option>
@@ -294,7 +294,6 @@
         <select id="guestCount" required>
           <option value="">Jumlah Tamu</option>
         </select>
-        <div id="guestDetailsContainer"></div>
         <textarea id="wishes" rows="4" placeholder="Ucapan & Doa"></textarea>
         <button type="submit" class="submit-btn">Kirim RSVP</button>
       </form>
@@ -306,7 +305,7 @@
   <script>
     const urlParams = new URLSearchParams(window.location.search);
     const invitationId = urlParams.get('id') || 'INV000';
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxD0VcGi4uAID1RRrbfwpl6laE32txO9kekJv6_h1rwlvfuui92ZPXEknCeSaAUxMwE/exec';
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxa2-wq5lhjiV9FekUJ9FYunXcpoeRm_h_iyGgolwfFAxr43FfMJWhx6HbkOK7B-XR4/exec';
 
     let invitationName = 'Our Beloved Guest';
     let maxGuest = 1;
@@ -321,10 +320,12 @@
           invitationName = result.name;
           maxGuest = result.pax;
         } else {
-          console.log('Guest not found in sheet, using defaults');
+          // Surface the real reason: a bad ID and a mis-set-up sheet
+          // look identical otherwise.
+          console.warn('RSVP lookup failed for id="' + invitationId + '":', result.error);
         }
       } catch (error) {
-        console.log('Error fetching guest data:', error);
+        console.error('Could not reach the Apps Script endpoint:', error);
       }
       
       // Initialize page after loading data
@@ -335,7 +336,6 @@
       document.getElementById('guestBadge').innerHTML = `Dear <strong>${invitationName}</strong>`;
       document.getElementById('openingGuest').textContent = invitationName;
       document.getElementById('guestInput').value = invitationName;
-      document.getElementById('invitationId').textContent = invitationId;
       document.getElementById('maxGuestLabel').textContent = maxGuest;
       
       populateGuestCount();
@@ -383,7 +383,6 @@
     // RSVP
     const guestCountSelect = document.getElementById('guestCount');
     const attendanceSelect = document.getElementById('attendance');
-    const guestDetailsContainer = document.getElementById('guestDetailsContainer');
 
     function populateGuestCount() {
       guestCountSelect.innerHTML = '<option value="">Jumlah Tamu</option>';
@@ -395,60 +394,28 @@
       }
     }
 
-    function renderGuestInputs(count) {
-      guestDetailsContainer.innerHTML = '';
-      for (let i = 1; i <= count; i++) {
-        const row = document.createElement('div');
-        row.className = 'guest-person-row';
-        row.innerHTML = `
-          <input type="text" name="guest_name_${i}" placeholder="Nama Tamu ${i}" required>
-          <input type="text" name="guest_relation_${i}" placeholder="Keterangan (Teman / Keluarga / Pasangan)">
-        `;
-        guestDetailsContainer.appendChild(row);
-      }
-    }
-
     attendanceSelect.addEventListener('change', function() {
       if (this.value === 'no') {
         guestCountSelect.classList.add('hidden');
         guestCountSelect.removeAttribute('required');
-        guestDetailsContainer.innerHTML = '';
+        guestCountSelect.value = '';
       } else {
         guestCountSelect.classList.remove('hidden');
         guestCountSelect.setAttribute('required', 'required');
       }
     });
 
-    guestCountSelect.addEventListener('change', function() {
-      const count = parseInt(this.value);
-      if (!isNaN(count)) renderGuestInputs(count);
-      else guestDetailsContainer.innerHTML = '';
-    });
-
     document.getElementById('rsvpForm').addEventListener('submit', function(event) {
       event.preventDefault();
       const attendance = attendanceSelect.value;
+      // 'Tidak Hadir' is recorded as 0 so the column stays summable
       const guestCount = attendance === 'yes' ? parseInt(guestCountSelect.value || '0') : 0;
       const wishes = document.getElementById('wishes').value;
 
-      const guestNames = [];
-      document.querySelectorAll('#guestDetailsContainer .guest-person-row').forEach((row, index) => {
-        const inputs = row.querySelectorAll('input');
-        guestNames.push({
-          no: index + 1,
-          name: inputs[0].value,
-          relation: inputs[1].value
-        });
-      });
-
       const rsvpData = {
-        invitation_id: invitationId,
-        invitation_name: invitationName,
-        attendance,
-        guest_count: guestCount,
-        guest_details: guestNames,
-        wishes,
-        submitted_at: new Date().toISOString()
+        id: invitationId,
+        kehadiran: guestCount,
+        ucapan: wishes
       };
 
       console.log('RSVP DATA:', rsvpData);
@@ -462,7 +429,7 @@
       fetch(APPS_SCRIPT_URL, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'text/plain;charset=utf-8',
         },
         body: JSON.stringify(rsvpData)
       })
@@ -475,9 +442,11 @@
               : `Terima kasih, ${invitationName}. Kehadiran Anda sudah kami catat 🤍`
           );
           document.getElementById('wishes').value = '';
-          document.getElementById('guestDetailsContainer').innerHTML = '';
           guestCountSelect.value = '';
           attendanceSelect.value = '';
+          // restore the count select in case 'Tidak Hadir' had hidden it
+          guestCountSelect.classList.remove('hidden');
+          guestCountSelect.setAttribute('required', 'required');
         } else {
           alert('Error: ' + (result.error || 'Gagal mengirim RSVP'));
         }

@@ -1,106 +1,124 @@
 // Google Apps Script - Paste this in your Google Sheet
 // Go to: Extensions > Apps Script, then replace the code with this
 
-// GUEST DATA SHEET - Configure your guest list sheet name here
-const GUEST_LIST_SHEET_NAME = 'Guest List'; // Change if your sheet has a different name
+// SHEET NAMES - change these if your tabs are named differently
+const GUEST_LIST_SHEET_NAME = 'Guest List'; // read-only: ID | Nama | Pax
+const RSVP_SHEET_NAME = 'RSVP';             // append-only: Waktu | ID | Nama | Kehadiran | Ucapan
+
+const RSVP_HEADERS = ['Waktu', 'ID', 'Nama', 'Kehadiran', 'Ucapan'];
+
+function jsonOut(payload) {
+  return ContentService
+    .createTextOutput(JSON.stringify(payload))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// Looks up an invitation in the guest list.
+// Returns { name, pax } or null when the ID is not on the list.
+// Throws when the sheet is missing the required columns.
+function findGuest(invitationId) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const guestSheet = ss.getSheetByName(GUEST_LIST_SHEET_NAME) || ss.getSheets()[0];
+
+  const data = guestSheet.getDataRange().getValues();
+  const headers = data[0].map(h => h.toString().toLowerCase().trim());
+
+  const idIndex = headers.indexOf('id');
+  // Accept either the Indonesian or English header for the name column
+  const nameIndex = headers.indexOf('nama') !== -1 ? headers.indexOf('nama') : headers.indexOf('name');
+  const paxIndex = headers.indexOf('pax');
+
+  if (idIndex === -1 || nameIndex === -1 || paxIndex === -1) {
+    throw new Error('Sheet "' + GUEST_LIST_SHEET_NAME + '" must have columns: ID, Nama, Pax');
+  }
+
+  const wanted = invitationId.toString().trim();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][idIndex].toString().trim() === wanted) {
+      return {
+        name: data[i][nameIndex].toString(),
+        pax: parseInt(data[i][paxIndex]) || 1
+      };
+    }
+  }
+  return null;
+}
 
 function doGet(e) {
   try {
     const invitationId = e.parameter.id;
     if (!invitationId) {
-      return ContentService
-        .createTextOutput(JSON.stringify({ success: false, error: 'Invitation ID required' }))
-        .setMimeType(ContentService.MimeType.JSON);
+      return jsonOut({ success: false, error: 'Invitation ID required' });
     }
-    
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let guestSheet = ss.getSheetByName(GUEST_LIST_SHEET_NAME);
-    
-    if (!guestSheet) {
-      guestSheet = ss.getSheets()[0]; // Fall back to first sheet
+
+    const guest = findGuest(invitationId);
+    if (!guest) {
+      return jsonOut({ success: false, error: 'Invitation not found' });
     }
-    
-    const data = guestSheet.getDataRange().getValues();
-    const headers = data[0].map(h => h.toString().toLowerCase().trim());
-    
-    const idIndex = headers.indexOf('id');
-    const nameIndex = headers.indexOf('name');
-    const paxIndex = headers.indexOf('pax');
-    
-    if (idIndex === -1 || nameIndex === -1 || paxIndex === -1) {
-      return ContentService
-        .createTextOutput(JSON.stringify({ success: false, error: 'Sheet must have columns: ID, Name, Pax' }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-    
-    for (let i = 1; i < data.length; i++) {
-      if (data[i][idIndex].toString().trim() === invitationId) {
-        return ContentService
-          .createTextOutput(JSON.stringify({
-            success: true,
-            name: data[i][nameIndex].toString(),
-            pax: parseInt(data[i][paxIndex]) || 1
-          }))
-          .setMimeType(ContentService.MimeType.JSON);
-      }
-    }
-    
-    return ContentService
-      .createTextOutput(JSON.stringify({ success: false, error: 'Invitation not found' }))
-      .setMimeType(ContentService.MimeType.JSON);
-      
+
+    return jsonOut({ success: true, name: guest.name, pax: guest.pax });
+
   } catch (error) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return jsonOut({ success: false, error: error.toString() });
   }
 }
 
 function doPost(e) {
+  const lock = LockService.getScriptLock();
   try {
-    const sheet = SpreadsheetApp.getActiveSheet();
-    
-    // Parse the JSON data from the request
     const data = JSON.parse(e.postData.contents);
-    
-    // Create headers if sheet is empty
-    if (sheet.getLastRow() === 0) {
-      sheet.appendRow([
-        'Timestamp',
-        'Invitation ID',
-        'Guest Name',
-        'Attendance',
-        'Guest Count',
-        'Guest Details',
-        'Wishes'
-      ]);
+    const invitationId = (data.id || '').toString().trim();
+
+    if (!invitationId) {
+      return jsonOut({ success: false, error: 'Invitation ID required' });
     }
-    
-    // Format guest details
-    let guestDetailsText = '';
-    if (data.guest_details && data.guest_details.length > 0) {
-      guestDetailsText = data.guest_details.map(g => `${g.no}. ${g.name} (${g.relation})`).join(' | ');
+
+    // Re-read the guest from the sheet: the browser can be tampered with,
+    // so the name and the pax limit must come from our own data.
+    const guest = findGuest(invitationId);
+    if (!guest) {
+      return jsonOut({ success: false, error: 'Invitation not found' });
     }
-    
-    // Append new row with data
-    sheet.appendRow([
-      new Date().toLocaleString('id-ID'),
-      data.invitation_id || '',
-      data.invitation_name || '',
-      data.attendance || '',
-      data.guest_count || 0,
-      guestDetailsText,
-      data.wishes || ''
+
+    // Clamp attendance to the invitation's allowance
+    const requested = parseInt(data.kehadiran);
+    const kehadiran = Math.max(0, Math.min(guest.pax, isNaN(requested) ? 0 : requested));
+
+    // Serialise appends so simultaneous submissions cannot collide
+    lock.waitLock(30000);
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let rsvpSheet = ss.getSheetByName(RSVP_SHEET_NAME);
+    if (!rsvpSheet) {
+      rsvpSheet = ss.insertSheet(RSVP_SHEET_NAME);
+    }
+    if (rsvpSheet.getLastRow() === 0) {
+      rsvpSheet.appendRow(RSVP_HEADERS);
+    }
+
+    const waktu = Utilities.formatDate(
+      new Date(),
+      ss.getSpreadsheetTimeZone(),
+      'dd/MM/yyyy HH:mm:ss'
+    );
+
+    rsvpSheet.appendRow([
+      waktu,
+      invitationId,
+      guest.name,
+      kehadiran,
+      (data.ucapan || '').toString()
     ]);
-    
-    // Return success response
-    return ContentService
-      .createTextOutput(JSON.stringify({ success: true, message: 'RSVP recorded successfully' }))
-      .setMimeType(ContentService.MimeType.JSON);
-      
+
+    return jsonOut({
+      success: true,
+      message: 'RSVP recorded successfully',
+      kehadiran: kehadiran
+    });
+
   } catch (error) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return jsonOut({ success: false, error: error.toString() });
+  } finally {
+    try { lock.releaseLock(); } catch (ignored) {}
   }
 }
