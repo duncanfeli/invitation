@@ -13,6 +13,21 @@ function jsonOut(payload) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+// The guest table does not start at row 1 - the sheet keeps BaseUrl and the
+// WA template in the rows above it. Find the header row by looking for the
+// one that actually carries the ID / Nama / Pax labels.
+function findHeaderRow(data) {
+  const limit = Math.min(data.length, 20);
+  for (let i = 0; i < limit; i++) {
+    const row = data[i].map(c => c.toString().toLowerCase().trim());
+    const hasName = row.indexOf('nama') !== -1 || row.indexOf('name') !== -1;
+    if (row.indexOf('id') !== -1 && row.indexOf('pax') !== -1 && hasName) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 // Looks up an invitation in the guest list.
 // Returns { name, pax } or null when the ID is not on the list.
 // Throws when the sheet is missing the required columns.
@@ -21,19 +36,21 @@ function findGuest(invitationId) {
   const guestSheet = ss.getSheetByName(GUEST_LIST_SHEET_NAME) || ss.getSheets()[0];
 
   const data = guestSheet.getDataRange().getValues();
-  const headers = data[0].map(h => h.toString().toLowerCase().trim());
+  const headerRow = findHeaderRow(data);
 
+  if (headerRow === -1) {
+    throw new Error('Sheet "' + GUEST_LIST_SHEET_NAME +
+      '" needs a header row containing: ID, Nama, Pax');
+  }
+
+  const headers = data[headerRow].map(h => h.toString().toLowerCase().trim());
   const idIndex = headers.indexOf('id');
   // Accept either the Indonesian or English header for the name column
   const nameIndex = headers.indexOf('nama') !== -1 ? headers.indexOf('nama') : headers.indexOf('name');
   const paxIndex = headers.indexOf('pax');
 
-  if (idIndex === -1 || nameIndex === -1 || paxIndex === -1) {
-    throw new Error('Sheet "' + GUEST_LIST_SHEET_NAME + '" must have columns: ID, Nama, Pax');
-  }
-
   const wanted = invitationId.toString().trim();
-  for (let i = 1; i < data.length; i++) {
+  for (let i = headerRow + 1; i < data.length; i++) {
     if (data[i][idIndex].toString().trim() === wanted) {
       return {
         name: data[i][nameIndex].toString(),
